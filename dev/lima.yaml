@@ -1,0 +1,159 @@
+minimumLimaVersion: 2.0.0
+
+base: template:_images/ubuntu-26.04
+
+cpus: 4
+memory: 6GiB
+
+mounts: []
+
+networks:
+- lima: user-v2
+
+containerd:
+  system: false
+  user: false
+
+portForwards:
+- guestPort: 6443
+  hostIP: 127.0.0.1
+- guestIP: 0.0.0.0
+  proto: any
+  ignore: true
+- guestIP: 127.0.0.1
+  proto: any
+  ignore: true
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eu -o pipefail
+    if [ ! -x /usr/local/bin/k3s ]; then
+      mkdir -p /etc/rancher/k3s /var/lib/rancher/k3s/server/manifests
+      cat > /etc/rancher/k3s/config.yaml <<'EOF'
+    cluster-init: true
+    flannel-backend: wireguard-native
+    secrets-encryption: true
+    kube-proxy-arg: nodeport-addresses=127.0.0.0/8
+    node-label:
+    - svccontroller.k3s.cattle.io/enablelb=true
+    EOF
+      cat > /var/lib/rancher/k3s/server/manifests/harblet.yaml <<'EOF'
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: harblet-system
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: harblet
+      namespace: harblet-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: harblet
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - kind: ServiceAccount
+      name: harblet
+      namespace: harblet-system
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: harblet
+      namespace: harblet-system
+      annotations:
+        kubernetes.io/service-account.name: harblet
+    type: kubernetes.io/service-account-token
+    EOF
+      cat > /etc/sysctl.d/90-harblet.conf <<'EOF'
+    kernel.apparmor_restrict_unprivileged_unconfined = 0
+    EOF
+      sysctl -e -q -p /etc/sysctl.d/90-harblet.conf
+      password=$(openssl rand -hex 32)
+      cat > /etc/rancher/k3s/registries.yaml <<EOF
+    mirrors:
+      "zot.harblet-system.svc.cluster.local:5000":
+        endpoint:
+          - http://127.0.0.1:30500
+    configs:
+      "127.0.0.1:30500":
+        auth:
+          username: pull
+          password: $password
+    EOF
+      cat >> /var/lib/rancher/k3s/server/manifests/harblet.yaml <<EOF
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: registry-pull
+      namespace: harblet-system
+    type: Opaque
+    stringData:
+      password: $password
+    EOF
+      cat > /var/lib/rancher/k3s/server/manifests/traefik-config.yaml <<'EOF'
+    apiVersion: helm.cattle.io/v1
+    kind: HelmChartConfig
+    metadata:
+      name: traefik
+      namespace: kube-system
+    spec:
+      valuesContent: |-
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: "true"
+        updateStrategy:
+          type: Recreate
+        service:
+          spec:
+            type: ClusterIP
+        ports:
+          web:
+            hostPort: 80
+            http:
+              redirections:
+                entryPoint:
+                  to: websecure
+                  scheme: https
+                  permanent: true
+          websecure:
+            hostPort: 443
+    EOF
+      attempt=1
+      until curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=v1.36.6+k3s1 sh -; do
+        [ "$attempt" -ge 5 ] && exit 1
+        attempt=$((attempt + 1))
+        sleep 10
+      done
+    fi
+    until token=$(k3s kubectl -n harblet-system get secret harblet -o jsonpath='{.data.token}' 2>/dev/null) && [ -n "$token" ]; do sleep 2; done
+    mkdir -p /run/harblet
+    echo "$token" | base64 -d > /run/harblet/token
+    k3s kubectl -n harblet-system get secret harblet -o jsonpath='{.data.ca\.crt}' | base64 -d > /run/harblet/ca.crt
+    chmod 644 /run/harblet/token /run/harblet/ca.crt
+
+probes:
+- script: |
+    #!/bin/bash
+    set -eu -o pipefail
+    if ! timeout 300s bash -c "until test -s /run/harblet/token; do sleep 3; done"; then
+      echo >&2 "k3s is not ready yet"
+      exit 1
+    fi
+  hint: |
+    Run "limactl shell harblet sudo journalctl -u k3s" to check the k3s log,
+    or check the bottom of "/var/log/cloud-init-output.log".
+
+copyToHost:
+- guest: /run/harblet/token
+  host: "{{.Dir}}/kubernetes/token"
+- guest: /run/harblet/ca.crt
+  host: "{{.Dir}}/kubernetes/ca.crt"

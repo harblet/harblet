@@ -1,0 +1,45 @@
+minimumLimaVersion: 2.0.0
+
+base: template:_images/ubuntu-26.04
+
+cpus: 2
+memory: 4GiB
+
+mounts: []
+
+networks:
+- lima: user-v2
+
+containerd:
+  system: false
+  user: false
+
+portForwards:
+- guestPort: 3000
+  hostPort: 3001
+- guestPort: 8443
+- guestIP: 0.0.0.0
+  proto: any
+  ignore: true
+- guestIP: 127.0.0.1
+  proto: any
+  ignore: true
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eu -o pipefail
+    cat > /etc/systemd/system/https-forward.socket <<'EOF'
+    [Socket]
+    ListenStream=127.0.0.1:8443
+
+    [Install]
+    WantedBy=sockets.target
+    EOF
+    cat > /etc/systemd/system/https-forward.service <<'EOF'
+    [Service]
+    ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:443
+    EOF
+    systemctl daemon-reload
+    systemctl enable --now https-forward.socket

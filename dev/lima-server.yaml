@@ -1,0 +1,23 @@
+minimumLimaVersion: 2.0.0
+
+base: template:_images/ubuntu-24.04
+
+cpus: 2
+memory: 3GiB
+
+mounts: []
+
+networks:
+- lima: user-v2
+
+containerd:
+  system: false
+  user: false
+
+portForwards:
+- guestIP: 0.0.0.0
+  proto: any
+  ignore: true
+- guestIP: 127.0.0.1
+  proto: any
+  ignore: true

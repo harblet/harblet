@@ -1,0 +1,52 @@
+{
+  "name": "harblet",
+  "version": "0.0.0",
+  "description": "A deploy platform you host on your own servers",
+  "license": "BUSL-1.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harblet/harblet.git"
+  },
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "postinstall": "nuxt prepare",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "auth:schema": "auth generate --config better-auth.config.ts --output server/database/auth-schema.ts -y"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1166.0",
+    "@aws-sdk/lib-storage": "3.1166.0",
+    "@better-auth/core": "1.7.13",
+    "@nuxt/ui": "4.12.0",
+    "@nuxtjs/better-auth": "0.3.14",
+    "better-auth": "1.7.13",
+    "dotenv": "18.0.9",
+    "drizzle-orm": "1.0.0-rc.5",
+    "nuxt": "4.6.3",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
+    "repo-sdk": "0.3.7",
+    "tailwindcss": "4.3.4",
+    "undici": "8.12.3",
+    "uuid": "14.0.3",
+    "vue": "3.5.44",
+    "vue-router": "5.4.0",
+    "ws": "8.22.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@iconify-json/logos": "1.2.19",
+    "@iconify-json/lucide": "1.2.150",
+    "@iconify-json/simple-icons": "1.2.102",
+    "@types/pg": "8.23.1",
+    "@types/ws": "8.18.2",
+    "auth": "1.7.13",
+    "drizzle-kit": "1.0.0-rc.5",
+    "pino-pretty": "13.2.0",
+    "tsx": "4.23.15"
+  }
+}
