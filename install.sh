@@ -2,7 +2,7 @@
 set -eu
 
 k3s_version='v1.36.6+k3s1'
-version='0.0.0' # x-release-please-version
+version='0.1.0' # x-release-please-version
 image="${HARBLET_IMAGE:-ghcr.io/harblet/harblet:$version}"
 url="${HARBLET_URL:-}"
 app_secret="${HARBLET_APP_SECRET:-}"
