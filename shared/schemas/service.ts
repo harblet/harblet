@@ -4,7 +4,7 @@ export const databaseEngines = {
   postgres: {
     label: 'PostgreSQL',
     icon: 'i-logos-postgresql',
-    versions: ['18'],
+    versions: ['19', '18'],
     port: 5432,
     scheme: 'postgresql',
     defaultUser: 'postgres',
