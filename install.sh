@@ -194,7 +194,7 @@ spec:
         runAsGroup: 999
       containers:
       - name: postgres
-        image: postgres:18
+        image: postgres:19
         env:
         - name: POSTGRES_USER
           value: harblet
@@ -295,7 +295,7 @@ spec:
         node-role.kubernetes.io/control-plane: "true"
       initContainers:
       - name: wait-for-postgres
-        image: postgres:18
+        image: postgres:19
         command: [sh, -c, "until pg_isready -h postgres -U harblet -d harblet; do sleep 1; done"]
       containers:
       - name: harblet
