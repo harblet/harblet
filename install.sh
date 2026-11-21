@@ -8,34 +8,74 @@ url="${HARBLET_URL:-}"
 app_secret="${HARBLET_APP_SECRET:-}"
 backup="${HARBLET_BACKUP:-}"
 
+cyan='' green='' red='' reset=''
+if [ -t 1 ]; then
+  cyan=$(printf '\033[1;36m')
+  green=$(printf '\033[1;32m')
+  red=$(printf '\033[31m')
+  reset=$(printf '\033[0m')
+fi
+
+mark=''
+events=''
+current=0
+steps=4
+[ -z "$backup" ] || steps=5
+
+say() {
+  printf '%s\n' "$mark$1"
+}
+
+fail() {
+  say "$red$1$reset" >&2
+  exit 1
+}
+
+step() {
+  current=$((current + 1))
+  say "$cyan[$current/$steps] $1$reset"
+}
+
+rollout() {
+  if ! k3s kubectl -n harblet-system rollout status "$1" --timeout=10m; then
+    say "$red$2 didn't become ready within 10 minutes. The pods and their last log lines:$reset"
+    k3s kubectl -n harblet-system get pods
+    k3s kubectl -n harblet-system logs "$1" --all-containers --prefix --tail=20
+    exit 1
+  fi
+}
+
+finish() {
+  status=$?
+  [ -z "$events" ] || kill "$events" 2>/dev/null || true
+  [ $status -eq 0 ] || say "${red}Installing Harblet failed. To start over, run /usr/local/bin/k3s-uninstall.sh and then this script again.$reset"
+  exec >&- 2>&-
+  wait "$filter" || true
+}
+
 if [ -z "$url" ]; then
   address=$(ip -4 -o route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')
   if [ -z "$address" ]; then
-    echo "This server's IPv4 address couldn't be found. Set HARBLET_URL to the address Harblet is reached at, for example HARBLET_URL=http://203.0.113.10:3000." >&2
-    exit 1
+    fail "This server's IPv4 address couldn't be found. Set HARBLET_URL to the address Harblet is reached at, for example HARBLET_URL=http://203.0.113.10:3000."
   fi
   url="http://$address:3000"
 fi
 
 if command -v k3s >/dev/null 2>&1; then
-  echo "k3s is already installed on this server, so Harblet can't be installed." >&2
-  exit 1
+  fail "k3s is already installed on this server, so Harblet can't be installed."
 fi
 
 if [ -n "$backup" ]; then
   if [ "$(head -c 5 "$backup" 2>/dev/null)" != PGDMP ]; then
-    echo "$backup isn't a backup of Harblet's database. Set HARBLET_BACKUP to the .dump file from the backup destination." >&2
-    exit 1
+    fail "$backup isn't a backup of Harblet's database. Set HARBLET_BACKUP to the .dump file from the backup destination."
   fi
   if [ -z "$app_secret" ]; then
-    echo "Restoring a backup needs the app secret of the install it comes from. Set HARBLET_APP_SECRET to it." >&2
-    exit 1
+    fail "Restoring a backup needs the app secret of the install it comes from. Set HARBLET_APP_SECRET to it."
   fi
 fi
 
 if [ -n "$app_secret" ] && ! printf %s "$app_secret" | grep -Eqx '[0-9a-f]{64}'; then
-  echo "HARBLET_APP_SECRET isn't an app secret. An app secret has 64 characters, the digits 0 to 9 and the letters a to f." >&2
-  exit 1
+  fail "HARBLET_APP_SECRET isn't an app secret. An app secret has 64 characters, the digits 0 to 9 and the letters a to f."
 fi
 
 mkdir -p /etc/rancher/k3s /var/lib/rancher/k3s/server/manifests
@@ -96,16 +136,28 @@ spec:
 EOF
 
 installer=$(mktemp)
-curl -sfL https://get.k3s.io -o "$installer"
-trap 'if [ $? -ne 0 ]; then echo "Installing Harblet failed. To start over, run /usr/local/bin/k3s-uninstall.sh and then this script again." >&2; fi' EXIT
+curl -fsSL https://get.k3s.io -o "$installer"
+
+mark=$(printf '\001')
+pipe=$(mktemp -u)
+mkfifo "$pipe"
+sed -u -e "s/^$mark//;t" -e 's/^./      &/' < "$pipe" &
+filter=$!
+exec > "$pipe" 2>&1
+rm "$pipe"
+trap finish EXIT
+trap 'exit 130' INT TERM
+
+step "Installing k3s $k3s_version"
 INSTALL_K3S_VERSION="$k3s_version" sh "$installer"
 rm -f "$installer"
 
-if ! timeout 300 sh -c 'until k3s kubectl get --raw /readyz >/dev/null 2>&1; do sleep 2; done'; then
-  echo "k3s didn't become ready within 5 minutes." >&2
-  exit 1
+step "Waiting for k3s to start"
+if ! timeout --foreground 300 sh -c 'until k3s kubectl get --raw /readyz >/dev/null 2>&1; do sleep 2; done'; then
+  fail "k3s didn't become ready within 5 minutes. Run journalctl -u k3s to see why."
 fi
 
+step "Starting the database"
 k3s kubectl apply --server-side --field-manager=harblet -f - <<EOF
 apiVersion: v1
 kind: Namespace
@@ -246,11 +298,17 @@ spec:
     - port: 5432
 EOF
 
+k3s kubectl -n harblet-system get events --watch --field-selector involvedObject.kind=Pod -o jsonpath='{.reason}: {.message}{"\n"}' &
+events=$!
+
+rollout statefulset/postgres "The database"
+
 if [ -n "$backup" ]; then
-  k3s kubectl -n harblet-system rollout status statefulset/postgres --timeout=10m
+  step "Restoring the backup"
   k3s kubectl -n harblet-system exec -i postgres-0 -- pg_restore -U harblet -d harblet --exit-on-error < "$backup"
 fi
 
+step "Starting Harblet"
 k3s kubectl apply --server-side --field-manager=harblet -f - <<EOF
 apiVersion: v1
 kind: Service
@@ -324,10 +382,11 @@ spec:
             port: http
 EOF
 
-k3s kubectl -n harblet-system rollout status deployment/harblet --timeout=10m
+rollout deployment/harblet "Harblet"
 
+say ''
 if [ -n "$backup" ]; then
-  echo "Harblet is ready with the restored backup. Open $url and log in."
+  say "${green}Harblet is ready with the restored backup. Open $url and log in.$reset"
 else
-  echo "Harblet is ready. Open $url to create the first account."
+  say "${green}Harblet is ready. Open $url to create the first account.$reset"
 fi
