@@ -3,7 +3,7 @@ import { databaseEngines, databaseUrl, isDatabase } from '#shared/schemas/servic
 
 const router = useRouter()
 const id = computed(() => router.currentRoute.value.params.id as string)
-const toast = useToast()
+const { copy } = useCopy()
 const { data: service } = await useFetch(`/api/services/${id.value}`, { key: `service-${id.value}` })
 
 const shown = ref<Record<string, boolean>>({})
@@ -29,15 +29,6 @@ const fields = computed<{ label: string, value: string, masked?: string }[] | un
     { label: 'Connection URL', value: url(value.databasePassword!), masked: url(masked) }
   ]
 })
-
-async function copy(value: string) {
-  try {
-    await navigator.clipboard.writeText(value)
-    toast.add({ title: 'Copied', color: 'success' })
-  } catch {
-    toast.add({ title: 'Copying failed. Copy it by hand.', color: 'error' })
-  }
-}
 </script>
 
 <template>

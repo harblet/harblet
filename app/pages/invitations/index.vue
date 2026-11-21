@@ -5,6 +5,7 @@ import { LazyInvitationsCreationModal } from '#components'
 useHead({ title: 'Invitations' })
 
 const toast = useToast()
+const { copy } = useCopy()
 const origin = useRequestURL().origin
 const overlay = useOverlay()
 const creationModal = overlay.create(LazyInvitationsCreationModal)
@@ -23,8 +24,7 @@ async function invite() {
 }
 
 async function copyLink(invitation: Invitation) {
-  await navigator.clipboard.writeText(`${origin}/join/${invitation.token}`)
-  toast.add({ title: 'Link copied', color: 'success' })
+  await copy(`${origin}/join/${invitation.token}`, 'Link copied')
 }
 
 async function revoke(invitation: Invitation) {

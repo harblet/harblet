@@ -11,6 +11,7 @@ const roles: SelectItem[] = [
 ]
 
 const toast = useToast()
+const { copy } = useCopy()
 const origin = useRequestURL().origin
 const form = useTemplateRef('form')
 const state = reactive<{ email: string, role: 'admin' | 'user' }>({ email: '', role: 'user' })
@@ -32,8 +33,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof invitationSchema>
 }
 
 async function copyLink() {
-  await navigator.clipboard.writeText(link.value!)
-  toast.add({ title: 'Link copied', color: 'success' })
+  await copy(link.value!, 'Link copied')
 }
 </script>
 

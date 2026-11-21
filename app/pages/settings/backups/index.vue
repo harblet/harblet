@@ -2,19 +2,11 @@
 useHead({ title: 'Backups' })
 
 const toast = useToast()
+const { copy } = useCopy()
 
 const appSecret = ref<string>()
 const appSecretShown = ref(false)
 const restoreCommand = 'sudo HARBLET_APP_SECRET=YOUR_APP_SECRET HARBLET_BACKUP=backup.dump sh install.sh'
-
-async function copy(text: string) {
-  try {
-    await navigator.clipboard.writeText(text)
-    toast.add({ title: 'Copied', color: 'success' })
-  } catch {
-    toast.add({ title: 'Copying failed. Copy it by hand.', color: 'error' })
-  }
-}
 
 async function loadAppSecret() {
   try {

@@ -5,18 +5,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-const toast = useToast()
+const { copy } = useCopy()
 const { siteUrl } = useRuntimeConfig().public
 const command = `curl -fsSL ${new URL(`/api/join-scripts/${props.token}`, siteUrl).href} | sudo sh`
-
-async function copyCommand() {
-  try {
-    await navigator.clipboard.writeText(command)
-    toast.add({ title: 'Copied', color: 'success' })
-  } catch {
-    toast.add({ title: 'Copying failed. Copy it by hand.', color: 'error' })
-  }
-}
 </script>
 
 <template>
@@ -40,7 +31,7 @@ async function copyCommand() {
             variant="link"
             size="sm"
             aria-label="Copy command"
-            @click="copyCommand"
+            @click="copy(command)"
           />
         </template>
       </UInput>

@@ -7,6 +7,7 @@ const emit = defineEmits<{ close: [boolean] }>()
 
 const command = 'sudo /usr/local/bin/k3s-agent-uninstall.sh'
 const toast = useToast()
+const { copy } = useCopy()
 const removed = ref(false)
 const { loading, withLoading } = useLoading()
 
@@ -16,15 +17,6 @@ async function onRemove() {
     removed.value = true
   } catch (e) {
     toast.add({ title: (e as { data?: { message?: string } }).data?.message ?? 'Removing the server failed. Try again.', color: 'error' })
-  }
-}
-
-async function copyCommand() {
-  try {
-    await navigator.clipboard.writeText(command)
-    toast.add({ title: 'Copied', color: 'success' })
-  } catch {
-    toast.add({ title: 'Copying failed. Copy it by hand.', color: 'error' })
   }
 }
 </script>
@@ -53,7 +45,7 @@ async function copyCommand() {
             variant="link"
             size="sm"
             aria-label="Copy command"
-            @click="copyCommand"
+            @click="copy(command)"
           />
         </template>
       </UInput>

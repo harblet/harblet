@@ -7,6 +7,7 @@ import { LazyDeployHookRegenerationModal, LazyServicesDeletionModal } from '#com
 const router = useRouter()
 const id = computed(() => router.currentRoute.value.params.id as string)
 const toast = useToast()
+const { copy } = useCopy()
 const overlay = useOverlay()
 const deletionModal = overlay.create(LazyServicesDeletionModal)
 const regenerationModal = overlay.create(LazyDeployHookRegenerationModal)
@@ -23,15 +24,6 @@ const deployHookFields = computed(() => {
   const url = new URL(`/api/hooks/${service.value.deployHookToken}`, siteUrl).href
   return [{ label: 'URL', value: url }, { label: 'Command', value: `curl --fail -X POST ${url}` }]
 })
-
-async function copy(value: string) {
-  try {
-    await navigator.clipboard.writeText(value)
-    toast.add({ title: 'Copied', color: 'success' })
-  } catch {
-    toast.add({ title: 'Copying failed. Copy it by hand.', color: 'error' })
-  }
-}
 
 async function regenerateDeployHook() {
   if (service.value && await regenerationModal.open({ service: service.value }).result) {
