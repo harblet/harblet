@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/harblet/harblet/compare/v0.1.0...v0.2.0) (2026-11-21)
+
+
+### Features
+
+* add support for postgres 19 ([16dc2f8](https://github.com/harblet/harblet/commit/16dc2f8235b759cffaad0a06d0ef281ba379b9ea))
+* show progress and failure reasons during install ([b5ca392](https://github.com/harblet/harblet/commit/b5ca39234dff54ec1180515bfcda1da293677fb1))
+
+
+### Bug Fixes
+
+* make copy buttons work over plain HTTP ([38430e1](https://github.com/harblet/harblet/commit/38430e1da6e7361b242fb4ea4726c3a6b1b0a5e3))
+
 ## 0.1.0 (2026-11-18)
 
 
