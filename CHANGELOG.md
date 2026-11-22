@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/harblet/harblet/compare/v0.2.0...v0.3.0) (2026-11-22)
+
+
+### Features
+
+* add metrics history for servers and services ([3a0e25d](https://github.com/harblet/harblet/commit/3a0e25d01dc803f47241de295f7c658baf8a3915))
+* display warning when server is not reachable ([2fa1b5f](https://github.com/harblet/harblet/commit/2fa1b5f5cb8b0e7334c6753eca114a131d120f66))
+
 ## [0.2.0](https://github.com/harblet/harblet/compare/v0.1.0...v0.2.0) (2026-11-21)
 
 
