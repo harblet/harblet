@@ -9,7 +9,7 @@ Harblet is a deploy platform you host on your own servers, as an alternative to 
 ## Features
 
 - **Docker images and Git repositories.** A repository builds from its Dockerfile, or without one through [Railpack](https://github.com/railwayapp/railpack). Private GitHub repositories connect through a GitHub App that Harblet sets up for you, and private GitLab repositories through an access token, on GitLab.com or your own GitLab.
-- **Databases.** PostgreSQL 18 or 19 and MySQL 8.4 or 9.7 in one click. Only services in the same project can reach them.
+- **Databases.** PostgreSQL and MySQL in one click. Only services in the same project can reach them.
 - **Templates.** authentik, Directus, GitLab, n8n, Plausible, Umami, Uptime Kuma and WordPress install in one click, with their database, volumes and domain. Each part is a normal service that you can change afterwards.
 - **Volumes.** A folder that keeps a service's files across deployments and restarts. A service with volumes stays on one server and stops briefly during a deployment. If that deployment fails, it stays stopped until you redeploy the one before.
 - **Backups.** Database dumps go to S3-compatible storage every 15 minutes, every hour or every day. Each one can be downloaded and restored. Harblet backs up its own database the same way.
