@@ -1,5 +1,6 @@
 import { createHash, randomInt, timingSafeEqual } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
+import { connect } from 'node:net'
 
 interface Node {
   metadata: { name: string, creationTimestamp: string, labels: Record<string, string> }
@@ -48,6 +49,7 @@ const logger = useLogger('utils:servers')
 const firstServerLabel = 'node-role.kubernetes.io/control-plane'
 const serverPlan = 'k3s-server'
 const agentPlan = 'k3s-agent'
+const kubeletPort = 10250
 const failureReasons = ['ImagePullBackOff', 'InvalidImageName']
 const tokenLifetime = 24 * 60 * 60 * 1000
 const tokenAlphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -64,6 +66,19 @@ function isFirstServer(node: Node) {
 
 function nodeAddress(node: Node) {
   return node.status.addresses.find(address => address.type === 'InternalIP')?.address
+}
+
+function canConnect(host: string, port: number) {
+  return new Promise<boolean>((resolve) => {
+    const socket = connect({ host, port, timeout: 1000 })
+    const finish = (connected: boolean) => {
+      socket.destroy()
+      resolve(connected)
+    }
+    socket.once('connect', () => finish(true))
+    socket.once('timeout', () => finish(false))
+    socket.once('error', () => finish(false))
+  })
 }
 
 function notFound(error: unknown) {
@@ -85,10 +100,12 @@ export async function listServers() {
     kubeFetch<PodList>(`/api/v1/namespaces/${systemNamespace}/pods?${new URLSearchParams({ labelSelector: 'upgrade.cattle.io/node' })}`)
   ])
   const usage = new Map(metrics.items.map(item => [item.metadata.name, item.usage]))
-  return nodes.items
-    .map((node) => {
+  const servers = await Promise.all(nodes.items
+    .map(async (node) => {
       const used = usage.get(node.metadata.name)
       const first = isFirstServer(node)
+      const ready = node.status.conditions.some(condition => condition.type === 'Ready' && condition.status === 'True')
+      const address = nodeAddress(node)
       const version = node.status.nodeInfo.kubeletVersion
       const plan = plans.items.find(plan => plan.metadata.name === (first ? serverPlan : agentPlan))
       const waiting = pods.items
@@ -99,8 +116,9 @@ export async function listServers() {
       return {
         name: node.metadata.name,
         first,
-        ready: node.status.conditions.some(condition => condition.type === 'Ready' && condition.status === 'True'),
-        address: nodeAddress(node),
+        ready,
+        address,
+        unreachable: ready && !used && !await canConnect(address!, kubeletPort),
         version,
         upgrade: plan && isNewer(plan.spec.version, version)
           ? {
@@ -116,8 +134,8 @@ export async function listServers() {
         memory: { total: parseQuantity(node.status.capacity.memory), used: used ? parseQuantity(used.memory) : null },
         createdAt: node.metadata.creationTimestamp
       }
-    })
-    .sort((a, b) => Number(b.first) - Number(a.first) || a.createdAt.localeCompare(b.createdAt))
+    }))
+  return servers.sort((a, b) => Number(b.first) - Number(a.first) || a.createdAt.localeCompare(b.createdAt))
 }
 
 function upgradePlan(name: string, version: string, spec: Record<string, unknown>) {

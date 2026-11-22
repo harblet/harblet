@@ -27,6 +27,7 @@ Harblet is a deploy platform you host on your own servers, as an alternative to 
 - At least 2 CPUs and 4 GB of memory.
 - Ports 80 and 443 open for your services, and port 3000 for Harblet until it has its own domain.
 - Internet access from the server.
+- With more than one server: TCP ports 6443 and 10250 and UDP port 51820 open between the servers. They don't have to be open to the internet.
 
 ## Install
 
