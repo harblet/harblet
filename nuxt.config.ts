@@ -23,6 +23,8 @@ export default defineNuxtConfig({
     '/api/join-scripts/**': { auth: false },
     '/servers/**': admin,
     '/api/servers/**': admin,
+    '/metrics/**': admin,
+    '/api/metrics/**': admin,
     '/certificates/**': admin,
     '/api/certificates/**': admin,
     '/backup-destinations/**': admin,

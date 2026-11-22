@@ -17,6 +17,7 @@ const items = computed<NavigationMenuItem[][]>(() => [
         [
           { label: 'Infrastructure', type: 'label' },
           { label: 'Servers', icon: 'i-lucide-server', to: '/servers', active: router.currentRoute.value.path.startsWith('/servers') },
+          { label: 'Metrics', icon: 'i-lucide-chart-line', to: '/metrics' },
           { label: 'SSL Certificates', icon: 'i-lucide-shield-check', to: '/certificates' },
           { label: 'Backup destinations', icon: 'i-lucide-database-backup', to: '/backup-destinations' },
         ],

@@ -55,7 +55,7 @@ const tokenLifetime = 24 * 60 * 60 * 1000
 const tokenAlphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
 const units: Record<string, number> = { n: 1e-9, u: 1e-6, m: 1e-3, Ki: 1024, Mi: 1024 ** 2, Gi: 1024 ** 3 }
 
-function parseQuantity(quantity: string) {
+export function parseQuantity(quantity: string) {
   const [, value, unit] = quantity.match(/^([\d.]+)(\D*)$/)!
   return Number(value) * (units[unit!] ?? 1)
 }
@@ -318,4 +318,5 @@ export async function removeServer(name: string) {
     }
     throw error
   }
+  await deleteServerMetrics(name)
 }

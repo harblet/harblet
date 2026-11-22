@@ -27,6 +27,7 @@ const links = computed<NavigationMenuItem[]>(() => [
   { label: 'Overview', icon: 'i-lucide-layout-dashboard', to: base.value, exact: true },
   { label: 'Deployments', icon: 'i-lucide-history', to: `${base.value}/deployments` },
   { label: 'Logs', icon: 'i-lucide-logs', to: `${base.value}/logs` },
+  { label: 'Metrics', icon: 'i-lucide-chart-line', to: `${base.value}/metrics` },
   ...(service.value && isDatabase(service.value.type)
     ? [{ label: 'Backups', icon: 'i-lucide-database-backup', to: `${base.value}/backups` }]
     : [

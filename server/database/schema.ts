@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { defineRelationsPart } from 'drizzle-orm'
-import { bigint, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from 'drizzle-orm/pg-core'
+import { bigint, index, integer, jsonb, pgEnum, pgTable, primaryKey, real, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { v7 as uuidv7 } from 'uuid'
 import { users } from './auth-schema'
@@ -187,6 +187,28 @@ export const restores = pgTable('restores', {
   finishedAt: timestamp('finished_at'),
   ...timestamps
 }, table => [index('restores_service_id_idx').on(table.serviceId)])
+
+export const serverMetrics = pgTable('server_metrics', {
+  server: text('server').notNull(),
+  time: timestamp('time').notNull(),
+  cpu: real('cpu').notNull(),
+  cores: real('cores').notNull(),
+  memory: bigint('memory', { mode: 'number' }).notNull(),
+  disk: bigint('disk', { mode: 'number' }).notNull(),
+  diskTotal: bigint('disk_total', { mode: 'number' }).notNull(),
+  networkIn: real('network_in'),
+  networkOut: real('network_out')
+}, table => [primaryKey({ columns: [table.server, table.time] })])
+
+export const serviceMetrics = pgTable('service_metrics', {
+  serviceId: text('service_id').notNull().references(() => services.id, { onDelete: 'cascade' }),
+  time: timestamp('time').notNull(),
+  cpu: real('cpu').notNull(),
+  cores: real('cores').notNull(),
+  memory: bigint('memory', { mode: 'number' }).notNull(),
+  networkIn: real('network_in'),
+  networkOut: real('network_out')
+}, table => [primaryKey({ columns: [table.serviceId, table.time] })])
 
 export const appRelations = defineRelationsPart(
   { users, invitations, projects, gitConnections, services, deployments, certificates, domains, environmentVariables, volumes, deploymentVariables, backupDestinations, settings, backups, restores },

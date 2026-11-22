@@ -23,6 +23,7 @@
     "@better-auth/core": "1.7.13",
     "@nuxt/ui": "4.12.0",
     "@nuxtjs/better-auth": "0.3.14",
+    "@tanstack/charts": "1.5.0",
     "better-auth": "1.7.13",
     "dotenv": "18.0.9",
     "drizzle-orm": "1.0.0-rc.5",

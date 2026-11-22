@@ -16,6 +16,7 @@ export default defineNitroPlugin((nitroApp) => {
     .then(() => logger.info('Database migrations completed'))
     .then(resumeDeployments)
     .then(scheduleBackups)
+    .then(scheduleMetrics)
   nitroApp.hooks.hook('request', async () => {
     await migrated
   })
