@@ -30,12 +30,12 @@ export default defineEventHandler(async (event) => {
     if (!result.success) {
       throw validationError(result.error)
     }
-    const { name, repository, gitConnectionId, branch, rootDirectory, dockerfilePath, port, healthCheckPath, startTimeout } = result.data
+    const { name, repository, gitConnectionId, branch, autoDeploy, rootDirectory, dockerfilePath, port, healthCheckPath, startTimeout } = result.data
     if (gitConnectionId && !await db.query.gitConnections.findFirst({ where: { id: gitConnectionId }, columns: { id: true } })) {
       const message = 'This Git connection was removed. Choose the repository again.'
       throw createError({ statusCode: 400, message, data: { errors: [{ name: 'repository', message }] } })
     }
-    settings = { name, repository, gitConnectionId: gitConnectionId ?? null, branch, rootDirectory: rootDirectory || null, dockerfilePath: dockerfilePath || null, port: port ?? null, healthCheckPath: healthCheckPath || null, startTimeout }
+    settings = { name, repository, gitConnectionId: gitConnectionId ?? null, branch, autoDeploy, rootDirectory: rootDirectory || null, dockerfilePath: dockerfilePath || null, port: port ?? null, healthCheckPath: healthCheckPath || null, startTimeout }
   } else {
     const result = await readValidatedBody(event, serviceSettingsSchema.safeParse)
     if (!result.success) {

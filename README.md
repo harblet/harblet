@@ -16,6 +16,7 @@ Harblet is a deploy platform you host on your own servers, as an alternative to 
 - **Domains with HTTPS.** Add your domains to a service and upload their certificates. Wildcard certificates work.
 - **Environment variables,** encrypted in Harblet's database.
 - **Deployments you can follow.** Build logs, live logs and health checks. If a deployment fails, the version before it keeps running, and an earlier deployment can be redeployed.
+- **Deploy on push.** A push to a service's branch deploys it. With the GitHub App that works on its own, as long as GitHub can reach Harblet. For GitLab and other Git hosts, add the service's deploy hook as a push webhook.
 - **Deploy hooks.** Every service has a secret URL. A `POST` from your CI pipeline deploys it.
 - **More servers.** Run one command on a new server and it joins. When a server fails, its services start on another one.
 - **Your team.** Invite colleagues with a link, as admins or members.

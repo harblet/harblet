@@ -57,7 +57,7 @@ type Result = { status: 'succeeded' | 'failed' | 'cancelled', error?: string, im
 const failureReasons = ['ImagePullBackOff', 'InvalidImageName', 'CrashLoopBackOff', 'CreateContainerConfigError']
 const maxFailureDuration = 5 * 60 * 1000
 
-export async function queueDeployment(tx: Transaction, serviceId: string, userId: string | null, source?: Source, afterDeploymentId?: string) {
+export async function queueDeployment(tx: Transaction, serviceId: string, userId: string | null, source?: Source, afterDeploymentId?: string, trigger: 'user' | 'hook' | 'push' = userId ? 'user' : 'hook') {
   const [service] = await tx.select({ image: services.image, port: services.port, healthCheckPath: services.healthCheckPath, command: services.command })
     .from(services)
     .where(eq(services.id, serviceId))
@@ -76,7 +76,7 @@ export async function queueDeployment(tx: Transaction, serviceId: string, userId
     })
   }
   const [deployment] = await tx.insert(deployments)
-    .values({ serviceId, userId, afterDeploymentId, trigger: userId ? 'user' : 'hook', status: 'queued', image, imageDigest, commitSha, commitMessage, port, healthCheckPath, command })
+    .values({ serviceId, userId, afterDeploymentId, trigger, status: 'queued', image, imageDigest, commitSha, commitMessage, port, healthCheckPath, command })
     .returning({ id: deployments.id })
   if (environmentVariables.length) {
     await tx.insert(deploymentVariables).values(environmentVariables.map(({ key, value }) => ({ deploymentId: deployment!.id, key, value })))
@@ -84,8 +84,8 @@ export async function queueDeployment(tx: Transaction, serviceId: string, userId
   return deployment!.id
 }
 
-export async function deployService(serviceId: string, userId: string | null, source?: Source) {
-  const id = await db.transaction(tx => queueDeployment(tx, serviceId, userId, source))
+export async function deployService(serviceId: string, userId: string | null, source?: Source, trigger?: 'hook' | 'push') {
+  const id = await db.transaction(tx => queueDeployment(tx, serviceId, userId, source, undefined, trigger))
   await startQueuedDeployments()
   return db.query.deployments.findFirst({ where: { id } })
 }

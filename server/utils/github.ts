@@ -42,13 +42,15 @@ export async function convertManifest(code: string): Promise<typeof gitConnectio
     name: string
     owner: { login: string, type: 'User' | 'Organization' }
     pem: string
+    webhook_secret: string | null
   }>(`/app-manifests/${encodeURIComponent(code)}/conversions`, undefined, 'POST')
   return {
     provider: 'github',
     name: app.name,
     owner: app.owner.login,
     config: { appId: app.id, slug: app.slug, ownerType: app.owner.type },
-    credentials: app.pem
+    credentials: app.pem,
+    webhookSecret: app.webhook_secret
   }
 }
 

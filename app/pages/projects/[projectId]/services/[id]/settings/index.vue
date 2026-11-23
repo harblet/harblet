@@ -38,13 +38,14 @@ const state = reactive<{
   repository: string
   gitConnectionId?: string | null
   branch: string
+  autoDeploy: boolean
   rootDirectory: string
   dockerfilePath: string
   port?: number | null
   command: string
   healthCheckPath?: string | null
   startTimeout?: number
-}>({ name: '', image: '', repository: '', branch: '', rootDirectory: '', dockerfilePath: '', command: '' })
+}>({ name: '', image: '', repository: '', branch: '', autoDeploy: true, rootDirectory: '', dockerfilePath: '', command: '' })
 const { loading, withLoading } = useLoading()
 const instancesForm = useTemplateRef('instancesForm')
 const instancesState = reactive<{ instances?: number }>({})
@@ -58,6 +59,7 @@ watch(service, (value) => {
     repository: value?.repository ?? '',
     gitConnectionId: value?.gitConnectionId ?? null,
     branch: value?.branch ?? '',
+    autoDeploy: value?.autoDeploy ?? true,
     rootDirectory: value?.rootDirectory ?? '',
     dockerfilePath: value?.dockerfilePath ?? '',
     port: value?.port,
@@ -164,6 +166,19 @@ async function onInstancesSubmit(event: FormSubmitEvent<z.output<typeof instance
                 placeholder="main"
                 class="w-full"
                 :ui="{ base: 'font-mono' }"
+              />
+            </UFormField>
+
+            <UFormField
+              v-if="service?.gitConnection?.provider === 'github'"
+              name="autoDeploy"
+            >
+              <USwitch
+                :model-value="state.autoDeploy && service.gitConnection.pushDeploys"
+                label="Deploy on push"
+                :description="service.gitConnection.pushDeploys ? 'Deploys every commit that is pushed to the branch.' : 'This GitHub App has no webhook, so GitHub can\'t tell Harblet about pushes. To deploy on push, an admin connects GitHub again in Settings → Git while Harblet is reachable from the internet.'"
+                :disabled="!service.gitConnection.pushDeploys"
+                @update:model-value="state.autoDeploy = $event"
               />
             </UFormField>
 
@@ -312,7 +327,7 @@ async function onInstancesSubmit(event: FormSubmitEvent<z.output<typeof instance
 
       <UPageCard
         title="Deploy hook"
-        description="Send a POST request to this URL to deploy the service, for example at the end of your CI pipeline. Anyone with the URL can deploy, so store it as a secret."
+        :description="git ? 'Send a POST request to this URL to deploy the service, for example at the end of your CI pipeline. Added as a push webhook in GitLab or another Git host, it deploys only pushes to the service\'s branch. Anyone with the URL can deploy, so store it as a secret.' : 'Send a POST request to this URL to deploy the service, for example at the end of your CI pipeline. Anyone with the URL can deploy, so store it as a secret.'"
         variant="naked"
         orientation="horizontal"
       >

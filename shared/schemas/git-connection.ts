@@ -17,6 +17,12 @@ export const githubCallbackSchema = z.object({
   state: z.string().min(1)
 })
 
+export const githubPushSchema = z.object({
+  ref: z.string(),
+  deleted: z.boolean(),
+  repository: z.object({ html_url: z.string() })
+})
+
 const gitlabUrlMessage = 'Enter an https:// URL without a path, like https://gitlab.com'
 
 export const gitlabConnectionSchema = z.object({

@@ -1,4 +1,4 @@
-import type { BadgeProps } from '@nuxt/ui'
+import type { BadgeProps, UserProps } from '@nuxt/ui'
 
 const statuses: Record<string, BadgeProps> = {
   queued: { label: 'Queued', color: 'neutral', icon: 'i-lucide-clock' },
@@ -11,6 +11,16 @@ const statuses: Record<string, BadgeProps> = {
 
 export function deploymentStatusBadge(status?: string): BadgeProps {
   return (status && statuses[status]) || { label: 'Not deployed', color: 'neutral' }
+}
+
+const triggers: Record<string, UserProps> = {
+  hook: { name: 'Deploy hook', avatar: { icon: 'i-lucide-webhook' } },
+  push: { name: 'Push', avatar: { icon: 'i-lucide-git-commit-horizontal' } },
+  rollback: { name: 'Rollback', avatar: { icon: 'i-lucide-undo-2' } }
+}
+
+export function deploymentTriggerUser(trigger: string) {
+  return triggers[trigger]
 }
 
 export function formatDuration(from: string | Date, to: string | Date) {

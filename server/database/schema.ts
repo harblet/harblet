@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { defineRelationsPart } from 'drizzle-orm'
-import { bigint, index, integer, jsonb, pgEnum, pgTable, primaryKey, real, text, timestamp, unique } from 'drizzle-orm/pg-core'
+import { bigint, boolean, index, integer, jsonb, pgEnum, pgTable, primaryKey, real, text, timestamp, unique } from 'drizzle-orm/pg-core'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
 import { v7 as uuidv7 } from 'uuid'
 import { users } from './auth-schema'
@@ -21,7 +21,7 @@ export const gitProvider = pgEnum('git_provider', ['github', 'gitlab'])
 
 export const deploymentStatus = pgEnum('deployment_status', ['queued', 'building', 'deploying', 'succeeded', 'failed', 'cancelled'])
 
-export const deploymentTrigger = pgEnum('deployment_trigger', ['user', 'hook', 'rollback'])
+export const deploymentTrigger = pgEnum('deployment_trigger', ['user', 'hook', 'push', 'rollback'])
 
 export const backupProvider = pgEnum('backup_provider', ['s3'])
 
@@ -55,6 +55,7 @@ export const gitConnections = pgTable('git_connections', {
   owner: text('owner').notNull(),
   config: jsonb('config').$type<{ appId: number, slug: string, ownerType: 'User' | 'Organization' } | { url: string }>().notNull(),
   credentials: encrypted('credentials').notNull(),
+  webhookSecret: encrypted('webhook_secret'),
   ...timestamps
 })
 
@@ -84,6 +85,7 @@ export const services = pgTable('services', {
   repository: text('repository'),
   gitConnectionId: text('git_connection_id').references(() => gitConnections.id, { onDelete: 'set null' }),
   branch: text('branch'),
+  autoDeploy: boolean('auto_deploy').default(true).notNull(),
   rootDirectory: text('root_directory'),
   dockerfilePath: text('dockerfile_path'),
   port: integer('port'),

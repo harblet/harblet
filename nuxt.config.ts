@@ -36,6 +36,7 @@ export default defineNuxtConfig({
     '/settings/**': admin,
     '/api/settings/**': admin,
     '/api/github/**': admin,
+    '/api/github/webhooks': { auth: false },
     '/api/git-connections/**': admin
   },
   runtimeConfig: {

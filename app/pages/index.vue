@@ -143,8 +143,7 @@ const columns: TableColumn<Deployment>[] = [
             />
             <UUser
               v-else-if="row.original.trigger !== 'user'"
-              :name="row.original.trigger === 'hook' ? 'Deploy hook' : 'Rollback'"
-              :avatar="{ icon: row.original.trigger === 'hook' ? 'i-lucide-webhook' : 'i-lucide-undo-2' }"
+              v-bind="deploymentTriggerUser(row.original.trigger)"
               size="sm"
             />
           </template>

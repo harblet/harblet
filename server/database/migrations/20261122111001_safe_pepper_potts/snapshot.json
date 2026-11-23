@@ -1,0 +1,107 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "585b366c-47e9-45fe-a784-a0782d9dbbb8",
+  "prevIds": [
+    "28dfba31-e6da-4ac1-b36c-f5c8284fcf1e"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_enum",
+      "statementTarget": [
+        "enum",
+        "public",
+        "deployment_trigger"
+      ],
+      "writes": [
+        "s|enum|public.deployment_trigger"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "git_connections",
+        "webhook_secret"
+      ],
+      "writes": [
+        "s|col|public.git_connections.webhook_secret",
+        "n|col|public.git_connections.webhook_secret",
+        "e|col|public.git_connections.webhook_secret"
+      ],
+      "reads": [
+        "n|tbl|public.git_connections",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "services",
+        "auto_deploy"
+      ],
+      "writes": [
+        "s|col|public.services.auto_deploy",
+        "n|col|public.services.auto_deploy",
+        "e|col|public.services.auto_deploy"
+      ],
+      "reads": [
+        "n|tbl|public.services",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "git_connections",
+        "name": "webhook_secret",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "services",
+        "name": "auto_deploy",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "enums\u0000[\"public\",\"deployment_trigger\"]",
+      "set": {
+        "values": [
+          "user",
+          "hook",
+          "push",
+          "rollback"
+        ]
+      }
+    }
+  ]
+}

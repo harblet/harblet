@@ -72,6 +72,10 @@ export const deployHookParamsSchema = z.object({
   token: z.uuid('Invalid deploy hook')
 })
 
+export const deployHookPushSchema = z.object({
+  ref: z.string()
+})
+
 export const serviceSchema = z.object({
   name: z.string({ error: 'Enter a name' }).trim().min(1, 'Enter a name').max(64, 'Use at most 64 characters'),
   image: z.string({ error: 'Enter an image' }).trim().min(1, 'Enter an image'),
@@ -155,7 +159,7 @@ const command = z.string({ error: 'Enter a command' })
 
 export const serviceSettingsSchema = serviceSchema.extend({ command, healthCheckPath, startTimeout }).refine(hasPortForHealthCheck, healthCheckPortIssue)
 
-export const gitSettingsSchema = gitSchema.extend({ healthCheckPath, startTimeout }).refine(hasPortForHealthCheck, healthCheckPortIssue)
+export const gitSettingsSchema = gitSchema.extend({ autoDeploy: z.boolean(), healthCheckPath, startTimeout }).refine(hasPortForHealthCheck, healthCheckPortIssue)
 
 export const databaseSettingsSchema = serviceSchema.pick({ name: true })
 
