@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lt, sql } from 'drizzle-orm'
 import type { AnyColumn } from 'drizzle-orm'
-import { metricRanges } from '#shared/schemas/metric'
+import { metricInterval, metricRanges } from '#shared/schemas/metric'
 import type { MetricRange } from '#shared/schemas/metric'
 import { serverMetrics, serviceMetrics } from '../database/schema'
 
@@ -13,6 +13,13 @@ interface Usage {
   cpu?: { usageNanoCores?: number }
   memory?: { workingSetBytes?: number }
   network?: Network
+}
+
+interface Counter {
+  time: number
+  rx: number
+  tx: number
+  rate?: { in: number, out: number }
 }
 
 interface Summary {
@@ -35,10 +42,10 @@ type Buckets = ReturnType<typeof buckets>
 
 const logger = useLogger('utils:metrics')
 
-const interval = 60_000
-const retention = 30 * 24 * 60 * interval
+const minute = 60_000
+const retention = 7 * 24 * 60 * minute
 const virtualInterfaces = /^(cni|flannel)/
-const counters = new Map<string, { time: number, rx: number, tx: number }>()
+const counters = new Map<string, Counter>()
 let sampling: Promise<unknown> = Promise.resolve()
 
 function networkRate(key: string, network?: Network) {
@@ -46,18 +53,22 @@ function networkRate(key: string, network?: Network) {
   if (!network || !interfaces.length) {
     return
   }
-  const current = {
+  const current: Counter = {
     time: Date.parse(network.time),
     rx: interfaces.reduce((total, { rxBytes = 0 }) => total + rxBytes, 0),
     tx: interfaces.reduce((total, { txBytes = 0 }) => total + txBytes, 0)
   }
   const previous = counters.get(key)
+  if (previous?.time === current.time) {
+    return previous.rate
+  }
   counters.set(key, current)
-  if (!previous || current.time <= previous.time || current.rx < previous.rx || current.tx < previous.tx) {
+  if (!previous || current.time < previous.time || current.rx < previous.rx || current.tx < previous.tx) {
     return
   }
   const seconds = (current.time - previous.time) / 1000
-  return { in: (current.rx - previous.rx) / seconds, out: (current.tx - previous.tx) / seconds }
+  current.rate = { in: (current.rx - previous.rx) / seconds, out: (current.tx - previous.tx) / seconds }
+  return current.rate
 }
 
 async function sample() {
@@ -70,7 +81,7 @@ async function sample() {
   const cores = new Map(nodes.items.map(node => [node.metadata.name, parseQuantity(node.status.capacity.cpu)]))
   const summaries = new Map<string, Summary>()
   await Promise.all(nodes.items.map(async ({ metadata: { name } }) => {
-    const summary = await kubeFetch<Summary>(`/api/v1/nodes/${name}/proxy/stats/summary`, { signal: AbortSignal.timeout(10_000) }).catch(() => undefined)
+    const summary = await kubeFetch<Summary>(`/api/v1/nodes/${name}/proxy/stats/summary`, { signal: AbortSignal.timeout(metricInterval / 2) }).catch(() => undefined)
     if (summary) {
       summaries.set(name, summary)
     }
@@ -143,7 +154,7 @@ async function sample() {
     })
   }
   for (const [key, counter] of counters) {
-    if (counter.time < time.getTime() - 10 * interval) {
+    if (counter.time < time.getTime() - 10 * minute) {
       counters.delete(key)
     }
   }
@@ -157,13 +168,16 @@ async function prune() {
 
 export function scheduleMetrics() {
   const run = (task: () => Promise<void>) => task().catch(error => logger.error(error))
-  const runSample = () => {
-    sampling = sampling.then(() => run(sample))
+  const scheduleSample = () => {
+    const next = (Math.round(Date.now() / metricInterval) + 1) * metricInterval
+    setTimeout(() => {
+      sampling = sampling.then(() => run(sample))
+      scheduleSample()
+    }, next - Date.now())
   }
   run(prune)
-  runSample()
-  setInterval(runSample, interval)
-  setInterval(() => run(prune), 60 * interval)
+  scheduleSample()
+  setInterval(() => run(prune), 60 * minute)
 }
 
 export async function deleteServerMetrics(server: string) {
@@ -191,7 +205,7 @@ function averagePercent(used: AnyColumn, total: AnyColumn) {
 }
 
 function recently() {
-  return new Date(Date.now() - 3 * interval)
+  return new Date(Date.now() - 3 * metricInterval)
 }
 
 function fill<T>(points: Map<number, T> | undefined, { bucket, count, first }: Buckets) {
@@ -202,10 +216,15 @@ function withCpuPercent<T extends { cpu: number, cores: number }>(row: T) {
   return { ...row, cpu: row.cpu / row.cores * 100 }
 }
 
+export async function currentServerMetrics() {
+  const rows = await db.select().from(serverMetrics).where(gte(serverMetrics.time, recently())).orderBy(serverMetrics.time)
+  return new Map(rows.map(row => [row.server, row]))
+}
+
 export async function listServerMetrics(range: MetricRange) {
   const window = buckets(range)
   const index = bucketIndex(serverMetrics.time, window)
-  const [servers, rows, recent] = await Promise.all([
+  const [servers, rows, current] = await Promise.all([
     listServers(),
     db.select({
       server: serverMetrics.server,
@@ -216,13 +235,12 @@ export async function listServerMetrics(range: MetricRange) {
       networkIn: average(serverMetrics.networkIn),
       networkOut: average(serverMetrics.networkOut)
     }).from(serverMetrics).where(gte(serverMetrics.time, window.since)).groupBy(serverMetrics.server, index),
-    db.select().from(serverMetrics).where(gte(serverMetrics.time, recently())).orderBy(serverMetrics.time)
+    currentServerMetrics()
   ])
   const points = new Map<string, Map<number, Omit<typeof rows[number], 'server' | 'index'>>>()
   for (const { server, index, ...values } of rows) {
     points.set(server, (points.get(server) ?? new Map()).set(index, values))
   }
-  const current = new Map(recent.map(row => [row.server, row]))
   return servers.map(({ name, ready, cpu, memory }) => {
     const row = current.get(name)
     return {

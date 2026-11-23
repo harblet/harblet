@@ -1,6 +1,5 @@
 import { createHash, randomInt, timingSafeEqual } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { connect } from 'node:net'
 
 interface Node {
   metadata: { name: string, creationTimestamp: string, labels: Record<string, string> }
@@ -11,10 +10,6 @@ interface Node {
     conditions: { type: string, status: string }[]
     nodeInfo: { kubeletVersion: string, osImage: string }
   }
-}
-
-interface NodeMetricsList {
-  items: { metadata: { name: string }, usage: { cpu: string, memory: string } }[]
 }
 
 interface Secret {
@@ -49,7 +44,6 @@ const logger = useLogger('utils:servers')
 const firstServerLabel = 'node-role.kubernetes.io/control-plane'
 const serverPlan = 'k3s-server'
 const agentPlan = 'k3s-agent'
-const kubeletPort = 10250
 const failureReasons = ['ImagePullBackOff', 'InvalidImageName']
 const tokenLifetime = 24 * 60 * 60 * 1000
 const tokenAlphabet = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -68,19 +62,6 @@ function nodeAddress(node: Node) {
   return node.status.addresses.find(address => address.type === 'InternalIP')?.address
 }
 
-function canConnect(host: string, port: number) {
-  return new Promise<boolean>((resolve) => {
-    const socket = connect({ host, port, timeout: 1000 })
-    const finish = (connected: boolean) => {
-      socket.destroy()
-      resolve(connected)
-    }
-    socket.once('connect', () => finish(true))
-    socket.once('timeout', () => finish(false))
-    socket.once('error', () => finish(false))
-  })
-}
-
 function notFound(error: unknown) {
   if (error instanceof KubeError && error.statusCode === 404) {
     return undefined
@@ -93,19 +74,16 @@ function randomString(length: number) {
 }
 
 export async function listServers() {
-  const [nodes, metrics, plans, pods] = await Promise.all([
+  const [nodes, current, plans, pods] = await Promise.all([
     kubeFetch<{ items: Node[] }>('/api/v1/nodes'),
-    kubeFetch<NodeMetricsList>('/apis/metrics.k8s.io/v1beta1/nodes').catch(() => ({ items: [] })),
+    currentServerMetrics(),
     kubeFetch<PlanList>(`/apis/upgrade.cattle.io/v1/namespaces/${systemNamespace}/plans`).catch(() => ({ items: [] })),
     kubeFetch<PodList>(`/api/v1/namespaces/${systemNamespace}/pods?${new URLSearchParams({ labelSelector: 'upgrade.cattle.io/node' })}`)
   ])
-  const usage = new Map(metrics.items.map(item => [item.metadata.name, item.usage]))
-  const servers = await Promise.all(nodes.items
-    .map(async (node) => {
-      const used = usage.get(node.metadata.name)
+  return nodes.items
+    .map((node) => {
+      const used = current.get(node.metadata.name)
       const first = isFirstServer(node)
-      const ready = node.status.conditions.some(condition => condition.type === 'Ready' && condition.status === 'True')
-      const address = nodeAddress(node)
       const version = node.status.nodeInfo.kubeletVersion
       const plan = plans.items.find(plan => plan.metadata.name === (first ? serverPlan : agentPlan))
       const waiting = pods.items
@@ -116,9 +94,8 @@ export async function listServers() {
       return {
         name: node.metadata.name,
         first,
-        ready,
-        address,
-        unreachable: ready && !used && !await canConnect(address!, kubeletPort),
+        ready: node.status.conditions.some(condition => condition.type === 'Ready' && condition.status === 'True'),
+        address: nodeAddress(node),
         version,
         upgrade: plan && isNewer(plan.spec.version, version)
           ? {
@@ -130,12 +107,12 @@ export async function listServers() {
             }
           : null,
         os: node.status.nodeInfo.osImage,
-        cpu: { total: parseQuantity(node.status.capacity.cpu), used: used ? parseQuantity(used.cpu) : null },
-        memory: { total: parseQuantity(node.status.capacity.memory), used: used ? parseQuantity(used.memory) : null },
+        cpu: { total: parseQuantity(node.status.capacity.cpu), used: used?.cpu ?? null },
+        memory: { total: parseQuantity(node.status.capacity.memory), used: used?.memory ?? null },
         createdAt: node.metadata.creationTimestamp
       }
-    }))
-  return servers.sort((a, b) => Number(b.first) - Number(a.first) || a.createdAt.localeCompare(b.createdAt))
+    })
+    .sort((a, b) => Number(b.first) - Number(a.first) || a.createdAt.localeCompare(b.createdAt))
 }
 
 function upgradePlan(name: string, version: string, spec: Record<string, unknown>) {

@@ -25,7 +25,6 @@ watch(data, (value) => {
 type Server = NonNullable<typeof servers.value>[number]
 
 const upgradeErrors = computed(() => [...new Set(servers.value?.flatMap(server => server.upgrade?.error ?? []))])
-const unreachableServers = computed(() => servers.value?.filter(server => server.unreachable) ?? [])
 
 onMounted(() => {
   const timer = setInterval(() => refresh({ dedupe: 'defer' }), 5000)
@@ -82,16 +81,6 @@ const columns: TableColumn<Server>[] = [
         icon="i-lucide-circle-alert"
         title="The k3s upgrade is stuck"
         :description="upgradeError"
-      />
-
-      <UAlert
-        v-for="server in unreachableServers"
-        :key="server.name"
-        color="warning"
-        variant="subtle"
-        icon="i-lucide-triangle-alert"
-        :title="`Harblet can't reach ${server.name} on TCP 10250`"
-        description="Its CPU and memory usage stays empty until that port is open. The servers must reach each other directly on TCP 6443 and 10250 and UDP 51820, so check this server's firewall."
       />
 
       <UTable

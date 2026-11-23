@@ -26,6 +26,7 @@ const units = ['B', 'KB', 'MB', 'GB', 'TB']
 const timeFormat = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 const dayFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 const tooltipFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+const secondsFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
 
 const rows = computed(() => props.samples.flatMap(sample => props.series.map(({ key }): Row => {
   const raw = sample[key]
@@ -34,7 +35,8 @@ const rows = computed(() => props.samples.flatMap(sample => props.series.map(({ 
 const top = computed(() => props.max ?? Math.max(0, ...rows.value.map(row => row.raw ?? 0)))
 const hasData = computed(() => rows.value.some(row => row.raw !== undefined))
 const exponent = computed(() => props.unit === 'percent' ? 0 : Math.min(Math.floor(Math.log(Math.max(top.value, 1)) / Math.log(1024)), units.length - 1))
-const span = computed(() => props.samples.length * (Date.parse(props.samples[1]!.time) - Date.parse(props.samples[0]!.time)))
+const step = computed(() => Date.parse(props.samples[1]!.time) - Date.parse(props.samples[0]!.time))
+const span = computed(() => props.samples.length * step.value)
 
 function ticks(width: number) {
   const step = tickSteps.find(step => span.value / step <= (width - 50) / 56) ?? 10 * day
@@ -138,7 +140,7 @@ const definition = computed(() => {
       >
         <template #tooltip="{ points }">
           <p class="font-medium text-highlighted">
-            {{ tooltipFormat.format(new Date(points[0]!.datum.x)) }}
+            {{ (step < minute ? secondsFormat : tooltipFormat).format(new Date(points[0]!.datum.x)) }}
           </p>
           <div
             v-for="point in sortPoints(points)"

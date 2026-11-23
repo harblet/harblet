@@ -5,7 +5,7 @@ const range = ref('1h')
 const { data: servers, error, refresh } = useLazyFetch('/api/metrics', { key: 'metrics', query: { range }, server: false })
 
 onMounted(() => {
-  const timer = setInterval(() => refresh({ dedupe: 'defer' }), 60_000)
+  const timer = setInterval(() => refresh({ dedupe: 'defer' }), 5000)
   onBeforeUnmount(() => clearInterval(timer))
 })
 </script>

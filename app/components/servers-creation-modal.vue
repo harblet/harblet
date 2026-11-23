@@ -36,7 +36,7 @@ const command = `curl -fsSL ${new URL(`/api/join-scripts/${props.token}`, siteUr
         </template>
       </UInput>
       <p class="mt-3 text-sm text-muted">
-        The command works for 24 hours. The servers must reach each other directly on TCP 6443 and 10250 and UDP 51820.
+        The command works for 24 hours. The servers must reach each other directly on TCP 6443 and UDP 51820.
       </p>
     </template>
 
