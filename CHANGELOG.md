@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/harblet/harblet/compare/v0.3.0...v0.4.0) (2026-11-23)
+
+
+### Features
+
+* deploy services on push from GitHub and GitLab ([5529953](https://github.com/harblet/harblet/commit/552995338dad36d65f5e6dd217babd3c5dc44fb6))
+* sample metrics every 10 seconds and add a 30-minute range ([5ab0f45](https://github.com/harblet/harblet/commit/5ab0f45189f666fa4c8727fdfcc6dc4731168df2))
+
 ## [0.3.0](https://github.com/harblet/harblet/compare/v0.2.0...v0.3.0) (2026-11-22)
 
 
