@@ -11,13 +11,14 @@ const emit = defineEmits<{ close: [boolean] }>()
 
 const toast = useToast()
 const form = useTemplateRef('form')
-const state = reactive<{ name: string, repository: string, gitConnectionId?: string | null, branch: string, rootDirectory: string, dockerfilePath: string, port?: number | null }>({
+const state = reactive<{ name: string, repository: string, gitConnectionId?: string | null, branch: string, rootDirectory: string, dockerfilePath: string, worker: boolean, port?: number | null }>({
   name: '',
   repository: '',
   gitConnectionId: null,
   branch: 'main',
   rootDirectory: '',
   dockerfilePath: '',
+  worker: false,
   port: undefined
 })
 const { loading, withLoading } = useLoading()
@@ -107,10 +108,13 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof gitSchema>>) {
           />
         </UFormField>
 
+        <WorkerField v-model="state.worker" />
+
         <UFormField
+          v-if="!state.worker"
           label="Port"
           name="port"
-          help="The port your app listens on. Harblet passes it as PORT. Leave it empty if it doesn't take requests."
+          help="The port your app listens on. Leave it empty to use your PORT variable, the port the image exposes, or 8080. Harblet passes it to your app as PORT."
         >
           <UInputNumber
             v-model="state.port"
@@ -119,7 +123,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof gitSchema>>) {
             :increment="false"
             :decrement="false"
             :format-options="{ useGrouping: false }"
-            placeholder="3000"
+            placeholder="Automatic"
             class="w-full"
           />
         </UFormField>

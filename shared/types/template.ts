@@ -4,6 +4,7 @@ export interface TemplateImage {
   type: 'image'
   name: string
   image: string
+  worker?: boolean
   port?: number
   command?: string
   healthCheckPath?: string

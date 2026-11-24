@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "10e51b36-379f-475b-88bd-c835f934890e",
+  "prevIds": [
+    "585b366c-47e9-45fe-a784-a0782d9dbbb8"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "services",
+        "worker"
+      ],
+      "writes": [
+        "s|col|public.services.worker",
+        "n|col|public.services.worker",
+        "e|col|public.services.worker"
+      ],
+      "reads": [
+        "n|tbl|public.services",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "services",
+        "name": "worker",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

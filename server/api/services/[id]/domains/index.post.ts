@@ -1,5 +1,5 @@
 import { domainSchema } from '#shared/schemas/domain'
-import { serviceParamsSchema } from '#shared/schemas/service'
+import { isDatabase, serviceParamsSchema } from '#shared/schemas/service'
 import { domains } from '../../../../database/schema'
 
 export default defineEventHandler(async (event) => {
@@ -16,13 +16,13 @@ export default defineEventHandler(async (event) => {
 
   const service = await db.query.services.findFirst({
     where: { id: params.data.id },
-    columns: { id: true, projectId: true, port: true }
+    columns: { id: true, projectId: true, type: true, worker: true }
   })
   if (!service) {
     throw createError({ statusCode: 404, message: 'Service not found.' })
   }
-  if (!service.port) {
-    throw createError({ statusCode: 409, message: 'This service has no port, so it can\'t receive web traffic.' })
+  if (service.worker || isDatabase(service.type)) {
+    throw createError({ statusCode: 409, message: 'Only web services can have domains.' })
   }
   await checkDomain(result.data.hostname, user.role === 'admin', 'hostname')
 

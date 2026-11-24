@@ -40,6 +40,7 @@ export default {
       type: 'image',
       name: 'authentik worker',
       image,
+      worker: true,
       command: 'worker',
       variables: {
         ...variables,

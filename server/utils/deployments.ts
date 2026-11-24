@@ -56,6 +56,7 @@ type Result = { status: 'succeeded' | 'failed' | 'cancelled', error?: string, im
 
 const failureReasons = ['ImagePullBackOff', 'InvalidImageName', 'CrashLoopBackOff', 'CreateContainerConfigError']
 const maxFailureDuration = 5 * 60 * 1000
+const defaultPort = 8080
 
 export async function queueDeployment(tx: Transaction, serviceId: string, userId: string | null, source?: Source, afterDeploymentId?: string, trigger: 'user' | 'hook' | 'push' = userId ? 'user' : 'hook') {
   const [service] = await tx.select({ image: services.image, port: services.port, healthCheckPath: services.healthCheckPath, command: services.command })
@@ -225,15 +226,45 @@ async function advanceBuild(id: string) {
   const { service } = built!
   const image = builtImage(service.project.namespace, service.hostname)
   const { imageDigest } = result
+  const ports = webPorts(result.ports)
+  const port = service.worker ? null : built!.port ?? variablePort(built!.environmentVariables) ?? (ports.length > 1 ? undefined : ports[0] ?? defaultPort)
+  if (port === undefined) {
+    await finishDeployment(id, { status: 'failed', error: `The image exposes ports ${formatPorts(ports)}. Set the port in the service's settings.` })
+    await deleteBuild(id)
+    return true
+  }
   const [started] = await db.update(deployments)
-    .set({ status: 'deploying', image, imageDigest, ...commit })
+    .set({ status: 'deploying', image, imageDigest, port, ...commit })
     .where(and(eq(deployments.id, id), eq(deployments.status, 'building')))
     .returning({ id: deployments.id })
   if (started) {
-    await rollOut({ ...built!, image, imageDigest }, service, service.project.namespace)
+    await rollOut({ ...built!, image, imageDigest, port }, service, service.project.namespace)
   }
   await deleteBuild(id)
   return true
+}
+
+function variablePort(variables: { key: string, value: string }[]) {
+  const port = Number(variables.find(({ key }) => key === 'PORT')?.value)
+  return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : undefined
+}
+
+async function resolvePort(
+  { id, port, environmentVariables }: { id: string, port: number | null, environmentVariables: { key: string, value: string }[] },
+  service: Service
+) {
+  if (isDatabase(service.type) || service.worker) {
+    return null
+  }
+  if (port) {
+    return port
+  }
+  if (service.type !== 'git') {
+    throw new Error('This deployment has no port. Set the port in the service\'s settings and deploy again.')
+  }
+  const resolved = variablePort(environmentVariables) ?? defaultPort
+  await db.update(deployments).set({ port: resolved }).where(eq(deployments.id, id))
+  return resolved
 }
 
 async function rollOut(
@@ -249,6 +280,11 @@ async function rollOut(
   service: Service,
   namespace: string
 ) {
+  try {
+    port = await resolvePort({ id, port, environmentVariables }, service)
+  } catch (error) {
+    return finishDeployment(id, { status: 'failed', error: (error as Error).message })
+  }
   const selector = { 'app.kubernetes.io/name': service.hostname }
   const labels = { ...selector, 'app.kubernetes.io/managed-by': 'harblet' }
   const secret = `${service.hostname}-${id}`

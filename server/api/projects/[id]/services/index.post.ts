@@ -24,6 +24,9 @@ export default defineEventHandler(async (event) => {
     const message = 'This Git connection was removed. Choose the repository again.'
     throw createError({ statusCode: 400, message, data: { errors: [{ name: 'repository', message }] } })
   }
+  if (data.type === 'image' && !data.worker && !data.port) {
+    data.port = await imagePort(data.image)
+  }
   const [service] = await db.insert(services).values(serviceValues(project.id, data)).returning()
   await deployService(service!.id, user.id)
   setResponseStatus(event, 201)

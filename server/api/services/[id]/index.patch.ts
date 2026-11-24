@@ -30,24 +30,24 @@ export default defineEventHandler(async (event) => {
     if (!result.success) {
       throw validationError(result.error)
     }
-    const { name, repository, gitConnectionId, branch, autoDeploy, rootDirectory, dockerfilePath, port, healthCheckPath, startTimeout } = result.data
+    const { name, repository, gitConnectionId, branch, autoDeploy, rootDirectory, dockerfilePath, worker = false, port, healthCheckPath, startTimeout } = result.data
     if (gitConnectionId && !await db.query.gitConnections.findFirst({ where: { id: gitConnectionId }, columns: { id: true } })) {
       const message = 'This Git connection was removed. Choose the repository again.'
       throw createError({ statusCode: 400, message, data: { errors: [{ name: 'repository', message }] } })
     }
-    settings = { name, repository, gitConnectionId: gitConnectionId ?? null, branch, autoDeploy, rootDirectory: rootDirectory || null, dockerfilePath: dockerfilePath || null, port: port ?? null, healthCheckPath: healthCheckPath || null, startTimeout }
+    settings = { name, repository, gitConnectionId: gitConnectionId ?? null, branch, autoDeploy, rootDirectory: rootDirectory || null, dockerfilePath: dockerfilePath || null, worker, port: worker ? null : port ?? null, healthCheckPath: worker ? null : healthCheckPath || null, startTimeout }
   } else {
     const result = await readValidatedBody(event, serviceSettingsSchema.safeParse)
     if (!result.success) {
       throw validationError(result.error)
     }
-    const { name, image, port, command, healthCheckPath, startTimeout } = result.data
-    settings = { name, image, port: port ?? null, command: command || null, healthCheckPath: healthCheckPath || null, startTimeout }
+    const { name, image, worker = false, port, command, healthCheckPath, startTimeout } = result.data
+    settings = { name, image, worker, port: worker ? null : port ?? await imagePort(image), command: command || null, healthCheckPath: worker ? null : healthCheckPath || null, startTimeout }
   }
 
-  if (!settings.port && await db.query.domains.findFirst({ where: { serviceId: id }, columns: { id: true } })) {
-    const message = 'Remove the service\'s domains before removing its port.'
-    throw createError({ statusCode: 409, message, data: { errors: [{ name: 'port', message }] } })
+  if (settings.worker && await db.query.domains.findFirst({ where: { serviceId: id }, columns: { id: true } })) {
+    const message = 'Remove the service\'s domains before making it a worker.'
+    throw createError({ statusCode: 409, message, data: { errors: [{ name: 'worker', message }] } })
   }
 
   const [service] = await db.update(services)

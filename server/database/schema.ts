@@ -88,6 +88,7 @@ export const services = pgTable('services', {
   autoDeploy: boolean('auto_deploy').default(true).notNull(),
   rootDirectory: text('root_directory'),
   dockerfilePath: text('dockerfile_path'),
+  worker: boolean('worker').default(false).notNull(),
   port: integer('port'),
   healthCheckPath: text('health_check_path'),
   startTimeout: integer('start_timeout').default(5).notNull(),

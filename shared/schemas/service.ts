@@ -79,6 +79,7 @@ export const deployHookPushSchema = z.object({
 export const serviceSchema = z.object({
   name: z.string({ error: 'Enter a name' }).trim().min(1, 'Enter a name').max(64, 'Use at most 64 characters'),
   image: z.string({ error: 'Enter an image' }).trim().min(1, 'Enter an image'),
+  worker: z.boolean().optional(),
   port: z.int('Enter a whole number').min(1, 'Use a port from 1 to 65535').max(65535, 'Use a port from 1 to 65535').nullish()
 })
 
@@ -128,6 +129,7 @@ export const gitSchema = z.object({
     .regex(/^(?!.*(\.\.|\/\/|\.lock$|[/.]$))\w[\w./-]*$/, 'Enter a valid branch name'),
   rootDirectory: repositoryPath.nullish(),
   dockerfilePath: repositoryPath.nullish(),
+  worker: serviceSchema.shape.worker,
   port: serviceSchema.shape.port
 })
 
@@ -143,12 +145,6 @@ const healthCheckPath = z.string({ error: 'Enter a path' })
   .regex(/^(\/\S*)?$/, 'Start with / and don\'t use spaces')
   .nullish()
 
-function hasPortForHealthCheck({ port, healthCheckPath }: { port?: number | null, healthCheckPath?: string | null }) {
-  return !!port || !healthCheckPath
-}
-
-const healthCheckPortIssue = { message: 'Add a port to use a health check path', path: ['healthCheckPath'] }
-
 const startTimeout = z.int('Enter a whole number').min(1, 'Use 1 to 60 minutes').max(60, 'Use 1 to 60 minutes')
 
 const command = z.string({ error: 'Enter a command' })
@@ -157,9 +153,9 @@ const command = z.string({ error: 'Enter a command' })
   .refine(value => splitCommand(value), 'Close the open quote')
   .nullish()
 
-export const serviceSettingsSchema = serviceSchema.extend({ command, healthCheckPath, startTimeout }).refine(hasPortForHealthCheck, healthCheckPortIssue)
+export const serviceSettingsSchema = serviceSchema.extend({ command, healthCheckPath, startTimeout })
 
-export const gitSettingsSchema = gitSchema.extend({ autoDeploy: z.boolean(), healthCheckPath, startTimeout }).refine(hasPortForHealthCheck, healthCheckPortIssue)
+export const gitSettingsSchema = gitSchema.extend({ autoDeploy: z.boolean(), healthCheckPath, startTimeout })
 
 export const databaseSettingsSchema = serviceSchema.pick({ name: true })
 

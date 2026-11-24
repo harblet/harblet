@@ -1,0 +1,1 @@
+ALTER TABLE "services" ADD COLUMN "worker" boolean DEFAULT false NOT NULL;

@@ -18,7 +18,7 @@ interface PodList {
 }
 
 export type BuildResult =
-  | { status: 'succeeded', imageDigest: string }
+  | { status: 'succeeded', imageDigest: string, ports: number[] }
   | { status: 'failed', error: string }
 
 const railpack = {
@@ -106,7 +106,15 @@ else
   set -- "$@" --frontend gateway.v0 --opt source=ghcr.io/railwayapp/railpack-frontend:v${railpack.version} --local context=. --local dockerfile=/workspace/plan --opt "build-arg:cache-key=$CACHE_KEY" --opt "build-arg:secrets-hash=$SECRETS_HASH"
 fi
 buildctl build --progress=plain "$@" --output "type=image,name=$IMAGE,push=true,registry.insecure=true" --metadata-file /tmp/metadata.json
-sed -n 's/.*"containerimage.digest": *"\\([^"]*\\)".*/\\1/p' /tmp/metadata.json > /dev/termination-log`
+sed -n 's/.*"containerimage.digest": *"\\([^"]*\\)".*/\\1/p' /tmp/metadata.json > /dev/termination-log
+config=$(sed -n 's/.*"containerimage.config.digest": *"\\([^"]*\\)".*/\\1/p' /tmp/metadata.json)
+auth=$(sed -n 's/.*"auth": *"\\([^"]*\\)".*/\\1/p' /docker/config.json)
+repository=\${IMAGE#*/}
+if wget -q -T 10 -O /tmp/config.json --header "Authorization: Basic $auth" "http://\${IMAGE%%/*}/v2/\${repository%:*}/blobs/$config"; then
+  grep -o '"[0-9]*/tcp": *{' /tmp/config.json | tr -cd '0-9\\n' >> /dev/termination-log
+else
+  echo "Couldn't read the ports the image exposes."
+fi`
 
 export function builtImage(namespace: string, hostname: string) {
   return `${registryHost}/${namespace}/${hostname}`
@@ -262,11 +270,11 @@ export async function inspectBuild(id: string): Promise<{ logs: string, commit?:
   }
 
   if (conditions.some(condition => condition.type === 'Complete')) {
-    const imageDigest = message('build')
+    const [imageDigest = '', ...ports] = message('build').split('\n')
     if (!imageDigest.startsWith('sha256:')) {
       return { logs, commit, result: { status: 'failed', error: 'The build didn\'t report an image digest.' } }
     }
-    return { logs, commit, result: { status: 'succeeded', imageDigest } }
+    return { logs, commit, result: { status: 'succeeded', imageDigest, ports: ports.map(Number).filter(Boolean).toSorted((a, b) => a - b) } }
   }
 
   return { logs, commit }

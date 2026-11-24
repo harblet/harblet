@@ -14,7 +14,7 @@ const fields = computed<{ label: string, value: string, masked?: string }[] | un
     return
   }
   if (!isDatabase(value.type)) {
-    return value.port ? [{ label: 'Internal address', value: `${value.hostname}:${value.port}` }] : undefined
+    return value.deployedPort ? [{ label: 'Internal address', value: `${value.hostname}:${value.deployedPort}` }] : undefined
   }
   const type = value.type
   const { port } = databaseEngines[type]

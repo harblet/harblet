@@ -41,11 +41,12 @@ const state = reactive<{
   autoDeploy: boolean
   rootDirectory: string
   dockerfilePath: string
+  worker: boolean
   port?: number | null
   command: string
   healthCheckPath?: string | null
   startTimeout?: number
-}>({ name: '', image: '', repository: '', branch: '', autoDeploy: true, rootDirectory: '', dockerfilePath: '', command: '' })
+}>({ name: '', image: '', repository: '', branch: '', autoDeploy: true, rootDirectory: '', dockerfilePath: '', worker: false, command: '' })
 const { loading, withLoading } = useLoading()
 const instancesForm = useTemplateRef('instancesForm')
 const instancesState = reactive<{ instances?: number }>({})
@@ -62,6 +63,7 @@ watch(service, (value) => {
     autoDeploy: value?.autoDeploy ?? true,
     rootDirectory: value?.rootDirectory ?? '',
     dockerfilePath: value?.dockerfilePath ?? '',
+    worker: value?.worker ?? false,
     port: value?.port,
     command: value?.command ?? '',
     healthCheckPath: value?.healthCheckPath ?? '',
@@ -112,7 +114,7 @@ async function onInstancesSubmit(event: FormSubmitEvent<z.output<typeof instance
     >
       <UPageCard
         title="Settings"
-        :description="database ? undefined : git ? 'Changes to the repository, port, health check and start timeout apply on the next deployment.' : 'Changes to the image, start command, port, health check and start timeout apply on the next deployment.'"
+        :description="database ? undefined : git ? 'Changes to the repository, type, port, health check and start timeout apply on the next deployment.' : 'Changes to the image, start command, type, port, health check and start timeout apply on the next deployment.'"
         variant="naked"
         orientation="horizontal"
       >
@@ -237,10 +239,13 @@ async function onInstancesSubmit(event: FormSubmitEvent<z.output<typeof instance
             />
           </UFormField>
 
+          <WorkerField v-model="state.worker" />
+
           <UFormField
+            v-if="!state.worker"
             label="Port"
             name="port"
-            :help="git ? 'The port your app listens on. Harblet passes it as PORT. Leave it empty if it doesn\'t take requests.' : 'The port your app listens on. Leave it empty if it doesn\'t take requests.'"
+            :help="git ? 'The port your app listens on. Leave it empty to use your PORT variable, the port the image exposes, or 8080. Harblet passes it to your app as PORT.' : 'The port your app listens on. Leave it empty to use the port the image exposes.'"
           >
             <UInputNumber
               v-model="state.port"
@@ -249,12 +254,13 @@ async function onInstancesSubmit(event: FormSubmitEvent<z.output<typeof instance
               :increment="false"
               :decrement="false"
               :format-options="{ useGrouping: false }"
-              placeholder="80"
+              :placeholder="service?.deployedPort ? String(service.deployedPort) : 'Automatic'"
               class="w-full"
             />
           </UFormField>
 
           <UFormField
+            v-if="!state.worker"
             label="Health check path"
             name="healthCheckPath"
             help="A new deployment gets traffic once this path answers with a 2xx or 3xx status. Leave it empty to only check that the port accepts connections."

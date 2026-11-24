@@ -62,12 +62,12 @@ function certificateBadge(certificate: Domain['certificate']): BadgeProps {
     />
 
     <UAlert
-      v-if="!service?.port"
+      v-if="service?.worker"
       color="neutral"
       variant="subtle"
       icon="i-lucide-info"
-      title="This service has no port"
-      description="Domains send web traffic to the service's port, so a service without one can't have domains."
+      title="This service is a worker"
+      description="Workers don't take requests, so they can't have domains. To add one, make the service a web service in its settings."
     />
 
     <UPageCard

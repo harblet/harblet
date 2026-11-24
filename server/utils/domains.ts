@@ -29,7 +29,7 @@ export async function syncDomains(tx: Transaction, projectId: string) {
   }
   const { namespace } = project
   const services = await tx.query.services.findMany({
-    where: { projectId, port: { isNotNull: true } },
+    where: { projectId, worker: false },
     columns: { hostname: true },
     with: { domains: { columns: { id: true, hostname: true } } }
   })

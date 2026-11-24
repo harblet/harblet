@@ -66,6 +66,7 @@ export default {
       type: 'image',
       name: 'n8n runner',
       image: `n8nio/runners:${version}`,
+      worker: true,
       variables: {
         N8N_RUNNERS_AUTH_TOKEN: '${secret.runners}',
         N8N_RUNNERS_TASK_BROKER_URI: 'http://${worker.hostname}:${worker.port}'

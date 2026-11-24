@@ -11,7 +11,7 @@ const emit = defineEmits<{ close: [boolean] }>()
 
 const toast = useToast()
 const form = useTemplateRef('form')
-const state = reactive<{ name: string, image: string, port?: number | null }>({ name: '', image: '', port: undefined })
+const state = reactive<{ name: string, image: string, worker: boolean, port?: number | null }>({ name: '', image: '', worker: false, port: undefined })
 const { loading, withLoading } = useLoading()
 
 async function onSubmit(event: FormSubmitEvent<z.output<typeof serviceSchema>>) {
@@ -66,10 +66,13 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof serviceSchema>>) 
           />
         </UFormField>
 
+        <WorkerField v-model="state.worker" />
+
         <UFormField
+          v-if="!state.worker"
           label="Port"
           name="port"
-          help="The port your app listens on. Leave it empty if it doesn't take requests."
+          help="The port your app listens on. Leave it empty to use the port the image exposes."
         >
           <UInputNumber
             v-model="state.port"
@@ -78,7 +81,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof serviceSchema>>) 
             :increment="false"
             :decrement="false"
             :format-options="{ useGrouping: false }"
-            placeholder="80"
+            placeholder="Automatic"
             class="w-full"
           />
         </UFormField>

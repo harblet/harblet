@@ -10,7 +10,8 @@ export default defineEventHandler(async (event) => {
     where: { id: result.data.id },
     with: {
       project: { columns: { id: true, name: true } },
-      gitConnection: { columns: { provider: true, webhookSecret: true } }
+      gitConnection: { columns: { provider: true, webhookSecret: true } },
+      deployments: { where: { status: 'succeeded' }, orderBy: { id: 'desc' }, limit: 1, columns: { port: true } }
     }
   })
 
@@ -18,8 +19,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, message: 'Service not found.' })
   }
 
+  const { deployments, ...rest } = service
   return {
-    ...service,
+    ...rest,
+    deployedPort: service.worker ? null : deployments[0]?.port ?? null,
     gitConnection: service.gitConnection && { provider: service.gitConnection.provider, pushDeploys: !!service.gitConnection.webhookSecret }
   }
 })
