@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/harblet/harblet/compare/v0.4.0...v0.5.0) (2026-11-24)
+
+
+### Features
+
+* add worker services and detect ports automatically ([fdb29f2](https://github.com/harblet/harblet/commit/fdb29f20029d6da896eb737b8f32a852d19460e0))
+
 ## [0.4.0](https://github.com/harblet/harblet/compare/v0.3.0...v0.4.0) (2026-11-23)
 
 
