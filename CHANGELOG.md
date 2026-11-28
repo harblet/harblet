@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.0](https://github.com/harblet/harblet/compare/v0.5.0...v0.6.0) (2026-11-28)
+
+
+### Features
+
+* show a progress dialog while Harblet updates ([83cfb92](https://github.com/harblet/harblet/commit/83cfb92a12b66cc3b53bddba43141e804ddca328))
+* show available updates as a card in the sidebar ([c308eaf](https://github.com/harblet/harblet/commit/c308eaf20639c851ff0f1f9bd71efa3bc4ee8978))
+* switch the neutral palette to zinc to match our branding ([58c10f8](https://github.com/harblet/harblet/commit/58c10f87d7948828567ed82a2a2d6ab6b4f64b3a))
+
 ## [0.5.0](https://github.com/harblet/harblet/compare/v0.4.0...v0.5.0) (2026-11-24)
 
 
