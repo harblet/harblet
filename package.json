@@ -1,6 +1,6 @@
 {
   "name": "harblet",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A deploy platform you host on your own servers",
   "license": "BUSL-1.1",
   "repository": {
