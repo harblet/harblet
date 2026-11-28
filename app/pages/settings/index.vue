@@ -16,6 +16,7 @@ const { loading, withLoading } = useLoading()
 
 const { data: update } = useLazyFetch('/api/settings/update', { key: 'update', server: false })
 const updatingTo = ref<string>()
+const restarting = ref(false)
 const { loading: startingUpdate, withLoading: withStartingUpdate } = useLoading()
 
 watch(update, (value) => {
@@ -26,14 +27,17 @@ watch(update, (value) => {
 
 onMounted(() => {
   const timer = setInterval(async () => {
-    if (!updatingTo.value) {
+    if (!updatingTo.value || update.value?.update?.error) {
       return
     }
     const status = await $fetch('/api/settings/update', { timeout: 2000 }).catch(() => undefined)
+    restarting.value = !status
     if (status?.version === updatingTo.value) {
       reloadNuxtApp()
     } else if (status && (!status.update || status.update.error)) {
-      updatingTo.value = undefined
+      if (!status.update) {
+        updatingTo.value = undefined
+      }
       update.value = status
     }
   }, 2000)
@@ -44,6 +48,7 @@ async function startUpdate() {
   try {
     await withStartingUpdate(() => $fetch('/api/settings/update', { method: 'POST' }))
     updatingTo.value = update.value?.latest?.version
+    update.value = update.value && { ...update.value, update: undefined }
   } catch (e) {
     toast.add({ title: (e as { data?: { message?: string } }).data?.message ?? 'Starting the update failed. Try again.', color: 'error' })
   }
@@ -137,17 +142,7 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof domainSchema>>) {
         </UPageCard>
 
         <UAlert
-          v-if="updatingTo"
-          color="neutral"
-          variant="subtle"
-          icon="i-lucide-loader-circle"
-          :title="`Updating to ${updatingTo}`"
-          description="Harblet downloads the new version and then restarts. This page reloads when it's ready."
-          :ui="{ icon: 'animate-spin' }"
-        />
-
-        <UAlert
-          v-else-if="update?.update?.error"
+          v-if="update?.update?.error"
           color="error"
           variant="subtle"
           icon="i-lucide-circle-alert"
@@ -174,6 +169,53 @@ async function onSubmit(event: FormSubmitEvent<z.output<typeof domainSchema>>) {
           />
         </UPageCard>
       </div>
+
+      <UModal
+        :open="!!updatingTo"
+        :title="update?.update?.error ? `Updating to ${updatingTo} failed` : `Updating Harblet to ${updatingTo}`"
+        :description="update?.update?.error ?? 'Your services keep running. This page reloads when it\'s ready.'"
+        :dismissible="false"
+        :close="false"
+      >
+        <template
+          v-if="!update?.update?.error"
+          #body
+        >
+          <div class="flex flex-col gap-3 text-sm">
+            <div class="flex items-center gap-2">
+              <UIcon
+                :name="restarting ? 'i-lucide-circle-check' : 'i-lucide-loader-circle'"
+                class="size-5 shrink-0"
+                :class="restarting ? 'text-success' : 'animate-spin text-primary'"
+              />
+              Downloading version {{ updatingTo }}
+            </div>
+            <div
+              class="flex items-center gap-2"
+              :class="{ 'text-dimmed': !restarting }"
+            >
+              <UIcon
+                :name="restarting ? 'i-lucide-loader-circle' : 'i-lucide-circle'"
+                class="size-5 shrink-0"
+                :class="{ 'animate-spin text-primary': restarting }"
+              />
+              Restarting Harblet
+            </div>
+          </div>
+        </template>
+
+        <template
+          v-else
+          #footer
+        >
+          <UButton
+            label="Close"
+            color="neutral"
+            variant="outline"
+            @click="updatingTo = undefined"
+          />
+        </template>
+      </UModal>
     </template>
   </UDashboardPanel>
 </template>
