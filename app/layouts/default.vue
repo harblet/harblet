@@ -28,7 +28,7 @@ const items = computed<NavigationMenuItem[][]>(() => [
         ],
         [
           { label: 'Settings', type: 'label' },
-          { label: 'General', icon: 'i-lucide-settings', to: '/settings', exact: true, badge: update.value?.available ? 'Update' : undefined },
+          { label: 'General', icon: 'i-lucide-settings', to: '/settings', exact: true },
           { label: 'Git', icon: 'i-lucide-git-branch', to: '/settings/git' },
           { label: 'Backups', icon: 'i-lucide-archive', to: '/settings/backups' },
         ]
@@ -71,11 +71,21 @@ const userMenuItems = computed<DropdownMenuItem[][]>(() => [
           orientation="vertical"
         />
 
-        <UNavigationMenu
-          :items="links"
-          orientation="vertical"
-          class="mt-auto"
-        />
+        <div class="mt-auto flex flex-col gap-4">
+          <UAlert
+            v-if="update?.available"
+            variant="subtle"
+            icon="i-lucide-circle-arrow-up"
+            title="Update available"
+            :description="`Harblet ${update.latest?.version} is ready to install.`"
+            :actions="[{ label: 'View update', to: '/settings' }]"
+          />
+
+          <UNavigationMenu
+            :items="links"
+            orientation="vertical"
+          />
+        </div>
       </template>
 
       <template #footer>
